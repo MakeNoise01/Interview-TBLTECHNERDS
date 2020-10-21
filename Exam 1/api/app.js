@@ -7,6 +7,7 @@ const cookieParser = require('cookie-parser');
 const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 const cors = require('cors')
+const sendEmail = require('./utils')
 
 //-----------------------------------------------
 //            LOCAL STRATEGY                    |
@@ -51,14 +52,21 @@ passport.deserializeUser((id, done) => {
 
 
 const server = express();
-server.use(cors());
 
 
 server.name = 'API';
 server.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 server.use(bodyParser.json({ limit: '50mb' }));
+server.use(cors());
 server.use(morgan('dev'));
 server.use(cookieParser());
+server.use(
+	require('express-session')({
+		secret: 'secret',
+		resave: false,
+		saveUninitialized: false,
+	}),
+);
 server.use(passport.initialize());
 server.use(passport.session());
 
@@ -121,6 +129,7 @@ server.post('/add/:id', (req, res) => {
       let us1 = user[0]
       let us2 = user[1]
       us1.addContact(us2)
+      sendEmail('You are in my contact list', `We added you in our contact list. Thank you. I'm ${us1.first_name} ${us1.last_name}`, email)
       res.send(us2)
     })
     .catch(err => console.log(err))
@@ -181,9 +190,9 @@ server.post('/login', passport.authenticate('local'), function (req, res,) {
 //-------------------------------------
 
 server.post('/logout', (req, res) => {
-    console.log(req.user)
+
     req.logout()
-   // req.session.destroy()
+    req.session.destroy()
     res.send('Successful logout')
 });
 
