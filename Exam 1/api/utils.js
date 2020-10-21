@@ -27,4 +27,13 @@ transporter.sendMail(mailOptions, function (error, response) {
 });
 }
 
-module.exports = sendEmail
+function isAuthenticated(req, res, next) {
+	if (req.isAuthenticated()) {
+		next();
+	} else {
+		res.send('You should login');
+		res.status(404);
+	}
+}
+
+module.exports = {sendEmail, isAuthenticated}
