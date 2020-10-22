@@ -7,3 +7,11 @@
     padding-left: 2vw;
     padding-right: 2vw;
 }
+
+.modal2 {
+    height: 40vw;
+    background-color: rgb(200, 200, 200);
+    width: 70%;
+    margin: auto auto;
+    margin-top: 4vw;
+}
