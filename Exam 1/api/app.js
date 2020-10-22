@@ -5,30 +5,32 @@ const { User } = require('./db.js');
 const { Op } = require('sequelize');
 const cookieParser = require('cookie-parser');
 const passport = require('passport');
-const LocalStrategy = require('passport-local').Strategy;
-const cors = require('cors')
+const Strategy = require('passport-local').Strategy;
 const {sendEmail, isAuthenticated} = require('./utils')
 
 //-----------------------------------------------
 //            LOCAL STRATEGY                    |
 //-----------------------------------------------
 passport.use(
-    new LocalStrategy(
-        {
-            usernameField: "email",
-            passwordField: "password",
-            passReqToCallback: true,
-        },
-        (req, email, password, done) => {
-            User.findOne({ where: { email } }).then((user) => {
-                if (!user) {
-                    return done(null, false, { message: `User ${email} not found` });
-                } else if (password != user.password) {
-                    return done(null, false, { message: "Password incorrect" });
-                } else return done(null, user.dataValues);
-            });
-        }
-    )
+	new Strategy({ usernameField: 'email', passwordField: 'password'}, function (username, password, done) {
+		User.findOne({
+			where: {
+				email: username,
+			},
+		})
+			.then(user => {
+				if (!user) {
+					return done(null, false);
+				}
+				if (password != user.password) {
+					return done(null, false);
+				}
+				return done(null, user);
+			})
+			.catch(err => {
+				return done({ error: true });
+			});
+	}),
 );
 
 //-------------------------------------
@@ -54,7 +56,6 @@ const server = express();
 server.name = 'API';
 server.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 server.use(bodyParser.json({ limit: '50mb' }));
-server.use(cors());
 server.use(morgan('dev'));
 server.use(cookieParser());
 server.use(
@@ -66,7 +67,13 @@ server.use(
 );
 server.use(passport.initialize());
 server.use(passport.session());
-
+server.use((req, res, next) => {
+	res.header('Access-Control-Allow-Origin', 'http://localhost:3000'); // update to match the domain you will make the request from
+	res.header('Access-Control-Allow-Credentials', 'true');
+	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+	res.header('Access-Control-Allow-Methods', 'POST, GET, DELETE, PUT, OPTIONS');
+	next();
+});
 
 //\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 //\\\\             ROUTES               \\\\\
@@ -89,6 +96,20 @@ server.get('/user/:id', isAuthenticated, (req, res) => {
     })
         .then(us => res.send(us))
         .catch(err => res.send(err))
+})
+
+server.get('/contacts/:id', (req, res) => {
+    User.findOne({
+        where: {
+            id: req.params.id
+        },
+        include: {
+            association: 'contact',
+            attributes: ['first_name', 'last_name', 'contact_number', 'email'],     
+        }
+    })
+    .then(users => res.send(users.contact))
+    .catch(err => console.log(err))
 })
 
 server.get('/search', isAuthenticated, (req, res) => {
@@ -212,8 +233,8 @@ server.delete('/remove/:id', isAuthenticated, (req, res) => {
 //            LOGIN                   |
 //-------------------------------------
 
-server.post('/login', passport.authenticate('local'), function (req, res,) {
-    res.send(req.user)
+server.post('/auth/login', passport.authenticate('local', { failureRedirect: '/login' }), function (req, res,) {
+	res.send(req.user)
 });
 
 //-------------------------------------
