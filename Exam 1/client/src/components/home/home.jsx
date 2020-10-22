@@ -41,7 +41,7 @@ const Home = () => {
                 </button>
                 <div className='registerButton'>
                     <span>Don't have an account?</span><br />
-                    <Link to='register'>Register now!</Link>
+                    <Link to='/register'>Register now!</Link>
                 </div>
             </div>
             {flag ? <Redirect to='/home'/> : null}
